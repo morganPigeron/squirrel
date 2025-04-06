@@ -6,17 +6,42 @@ import "core:math"
 import "core:math/rand"
 import rl "vendor:raylib"
 
+DEBUG :: true
+
 Entity :: struct {
     position: [3]f32,
     offset: [3]f32,
+    delta_offset: f32,
     texture: rl.Texture,
     scale: f32,
+    target: [3]f32,
+    is_target_valid: bool,
 }
 
-update_entity :: proc (c: rl.Camera, e: ^Entity) {
-    e.position +=
-        ({rand.float32_range(-1,1), 0, rand.float32_range(-1,1)}) * rl.GetFrameTime()
+map_size :: 10
+update_smart_entity :: proc (c: rl.Camera, e: ^Entity) {
+
+    if (rl.Vector3DistanceSqrt(e.target, e.position) < 1 && e.is_target_valid) {
+        e.is_target_valid = false
+    }
+
+    if (!e.is_target_valid) {
+        e.target = {rand.float32_range(-map_size,map_size), 0, rand.float32_range(-map_size,map_size)}
+        e.is_target_valid = true
+    }
+    
+    e.position += rl.Vector3Normalize(e.target - e.position) * rl.GetFrameTime() 
+        
 }
+
+update_dumb_entity :: proc (c: rl.Camera, e: ^Entity) {
+    max_height :: 0.3
+    min_height :: 0
+    e.offset.y += (e.delta_offset * rl.GetFrameTime())
+    if e.offset.y >= max_height || e.offset.y <= min_height {
+        e.delta_offset *= -1 
+    }
+} 
 
 draw_entity :: proc (c: rl.Camera, e: Entity) {
     rl.DrawBillboardPro(
@@ -30,6 +55,12 @@ draw_entity :: proc (c: rl.Camera, e: Entity) {
         0,
         rl.WHITE
     )
+
+    if DEBUG {
+        rl.DrawLine3D(e.position, e.position + {1,0,0},rl.RED)
+        rl.DrawLine3D(e.position, e.position + {0,1,0},rl.GREEN)
+        rl.DrawLine3D(e.position, e.position + {0,0,1},rl.BLUE)
+    }
 }
 
 delete_entity :: proc (e: ^Entity) {
@@ -78,7 +109,7 @@ main :: proc () {
     tree.offset = {0,0,0}
     defer delete_entity(&tree)
 
-    max_count :: 100_000
+    max_count :: 100
     squirrels : []Entity = make([]Entity, max_count)
     text := rl.LoadTexture("squirrel.png")
     for &s in squirrels {
@@ -92,11 +123,29 @@ main :: proc () {
         delete(squirrels)
     }
 
+    max_food :: 100
+    foods : []Entity = make([]Entity, max_count)
+    food_text := rl.LoadTexture("food.png")
+    for &f in foods {
+        f.texture = food_text
+        f.offset = {0,0.1,0}
+        f.scale = 0.5
+        f.delta_offset = 0.2
+        f.position = {rand.float32_range(-10,10), 0, rand.float32_range(-10,10)}
+    }
+    defer {
+        rl.UnloadTexture(food_text)
+        delete(foods)
+    }
+    
     rl.SetTargetFPS(60)
     
     for !rl.WindowShouldClose() {
-        rl.UpdateCamera(&camera, .FIRST_PERSON)
-
+        
+        if rl.IsCursorHidden() {
+            rl.UpdateCamera(&camera, .FIRST_PERSON)
+        }
+        
         if rl.IsMouseButtonPressed(.RIGHT) {
             if rl.IsCursorHidden() {
                 rl.EnableCursor()
@@ -108,7 +157,10 @@ main :: proc () {
         handle_camera_inputs(&camera)
         
         for &s in squirrels {
-            update_entity(camera, &s)
+            update_smart_entity(camera, &s)
+        }
+        for &f in foods {
+            update_dumb_entity(camera, &f)
         }
         
         {
@@ -130,6 +182,9 @@ main :: proc () {
                 rl.DrawLine3D({0,0,0},{0,0,1},rl.BLUE)
 
                 draw_entity(camera, tree)
+                for f in foods {
+                    draw_entity(camera, f)
+                }
                 for s in squirrels {
                     draw_entity(camera, s)
                 }
