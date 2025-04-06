@@ -34,6 +34,34 @@ update_smart_entity :: proc (c: rl.Camera, e: ^Entity) {
         
 }
 
+make_squirrels :: proc () -> (squirrels: []Entity, text: rl.Texture) {
+    max_count :: 100
+    squirrels = make([]Entity, max_count)
+    text = rl.LoadTexture("squirrel.png")
+    for &s in squirrels {
+        s.texture = text
+        s.offset = {0,0,0}
+        s.scale = 0.5
+        s.position = {rand.float32_range(-10,10), 0, rand.float32_range(-10,10)}
+    }
+    
+    return
+}
+
+make_foods :: proc () -> (foods: []Entity, food_text: rl.Texture) {
+    max_food :: 100
+    foods = make([]Entity, max_food)
+    food_text = rl.LoadTexture("food.png")
+    for &f in foods {
+        f.texture = food_text
+        f.offset = {0,0.1,0}
+        f.scale = 0.5
+        f.delta_offset = 0.2
+        f.position = {rand.float32_range(-10,10), 0, rand.float32_range(-10,10)}
+    }
+    return
+}
+
 update_dumb_entity :: proc (c: rl.Camera, e: ^Entity) {
     max_height :: 0.3
     min_height :: 0
@@ -109,30 +137,13 @@ main :: proc () {
     tree.offset = {0,0,0}
     defer delete_entity(&tree)
 
-    max_count :: 100
-    squirrels : []Entity = make([]Entity, max_count)
-    text := rl.LoadTexture("squirrel.png")
-    for &s in squirrels {
-        s.texture = text
-        s.offset = {0,0,0}
-        s.scale = 0.5
-        s.position = {rand.float32_range(-10,10), 0, rand.float32_range(-10,10)}
-    }
+    squirrels, text := make_squirrels()
     defer {
         rl.UnloadTexture(text)
         delete(squirrels)
     }
 
-    max_food :: 100
-    foods : []Entity = make([]Entity, max_count)
-    food_text := rl.LoadTexture("food.png")
-    for &f in foods {
-        f.texture = food_text
-        f.offset = {0,0.1,0}
-        f.scale = 0.5
-        f.delta_offset = 0.2
-        f.position = {rand.float32_range(-10,10), 0, rand.float32_range(-10,10)}
-    }
+    foods, food_text := make_foods()
     defer {
         rl.UnloadTexture(food_text)
         delete(foods)
