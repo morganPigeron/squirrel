@@ -6,7 +6,17 @@ import "core:math"
 import "core:math/rand"
 import rl "vendor:raylib"
 
-DEBUG :: true
+DEBUG :: false
+
+paths: map[[6]f32]Land // [.. from, ..to]
+
+from_to :: #force_inline proc (from: [3]f32, to: [3]f32) -> (result: [6]f32) {
+    for i in 0..<3 {
+        result[i] = from[i]
+        result[i+3] = to[i+3]
+    }    
+    return 
+}
 
 Entity :: struct {
     position: [3]f32,
@@ -18,13 +28,34 @@ Entity :: struct {
     is_target_valid: bool,
 }
 
+find_nearest :: proc (from: [3]f32, entities: []Entity) -> (index: int) {
+
+    nearest: f32 = max(f32)
+
+    for e,i in entities {
+        dist := rl.Vector3DistanceSqrt(from, e.position)
+        if dist < nearest {
+            nearest = dist
+            index = i
+        }
+    }
+    
+    return
+}
+
 map_size :: 10
 update_smart_entity :: proc (c: rl.Camera, e: ^Entity) {
 
     if (rl.Vector3DistanceSqrt(e.target, e.position) < 1 && e.is_target_valid) {
-        e.is_target_valid = false
+        e.target = {0,0,0}
     }
 
+    if (rl.Vector3DistanceSqrt(e.target, e.position) < 1 &&
+        e.is_target_valid &&
+        e.target == {0,0,0}) {
+        e.is_target_valid = false
+    }
+    
     if (!e.is_target_valid) {
         e.target = {rand.float32_range(-map_size,map_size), 0, rand.float32_range(-map_size,map_size)}
         e.is_target_valid = true
@@ -35,14 +66,14 @@ update_smart_entity :: proc (c: rl.Camera, e: ^Entity) {
 }
 
 make_squirrels :: proc () -> (squirrels: []Entity, text: rl.Texture) {
-    max_count :: 100
+    max_count :: 1
     squirrels = make([]Entity, max_count)
     text = rl.LoadTexture("squirrel.png")
     for &s in squirrels {
         s.texture = text
         s.offset = {0,0,0}
         s.scale = 0.5
-        s.position = {rand.float32_range(-10,10), 0, rand.float32_range(-10,10)}
+        s.position = {0, 0, 0}
     }
     
     return
