@@ -26,15 +26,19 @@ Entity :: struct {
     is_target_valid: bool,
     is_going_home: bool,
     picked: bool,
+    is_targeted: bool,
 }
 
-find_nearest_not_picked :: proc (from: [3]f32, entities: []Entity) -> (index: int) {
+find_nearest_not_targeted :: proc (from: [3]f32, entities: []Entity) -> (index: int) {
 
     nearest: f32 = max(f32)
 
     for e,i in entities {
+        if e.picked || e.is_targeted  {
+            continue
+        }
         dist := rl.Vector3DistanceSqrt(from, e.position)
-        if dist < nearest && !e.picked {
+        if dist < nearest {
             nearest = dist
             index = i
         }
@@ -46,7 +50,7 @@ find_nearest_not_picked :: proc (from: [3]f32, entities: []Entity) -> (index: in
 find_around_not_picked :: proc (e: []Entity, position: [3]f32, radius: f32) -> (found_index: int, is_found: bool) {
 
     for elem, i in e {
-        if elem.picked {
+        if elem.picked  {
             continue
         }
         if rl.Vector3DistanceSqrt(elem.position, position) <= radius {
@@ -74,7 +78,8 @@ update_smart_entity :: proc (c: rl.Camera, e: ^Entity, f: []Entity) {
             e.target = {0,0,0}
         } else {
             //reused code
-            found_index := find_nearest_not_picked(e.position, f)
+            found_index := find_nearest_not_targeted(e.position, f)
+            f[found_index].is_targeted = true
             e.target = f[found_index].position
         }
     } else if ( // reached home
@@ -87,8 +92,9 @@ update_smart_entity :: proc (c: rl.Camera, e: ^Entity, f: []Entity) {
 
     
     if (!e.is_target_valid) {
-        found_index := find_nearest_not_picked(e.position, f)
+        found_index := find_nearest_not_targeted(e.position, f)
         e.target = f[found_index].position
+        f[found_index].is_targeted = true
         e.is_target_valid = true
     }
     
@@ -117,7 +123,7 @@ make_foods :: proc () -> (foods: []Entity, food_text: rl.Texture) {
     for &f in foods {
         f.texture = food_text
         f.offset = {0,0.1,0}
-        f.scale = 0.5
+        f.scale =  0.5
         f.delta_offset = 0.2
         f.position = {rand.float32_range(-5,5)*2, 0, rand.float32_range(-5,5)*2}
     }
