@@ -24,6 +24,7 @@ Entity :: struct {
     scale: f32,
     target: [3]f32,
     is_target_valid: bool,
+    is_going_home: bool,
     picked: bool,
 }
 
@@ -42,20 +43,48 @@ find_nearest_not_picked :: proc (from: [3]f32, entities: []Entity) -> (index: in
     return
 }
 
+find_around_not_picked :: proc (e: []Entity, position: [3]f32, radius: f32) -> (found_index: int, is_found: bool) {
+
+    for elem, i in e {
+        if elem.picked {
+            continue
+        }
+        if rl.Vector3DistanceSqrt(elem.position, position) <= radius {
+            found_index = i
+            is_found = true
+            break
+        }
+    }
+    
+    return
+}
+
 map_size :: 10
 update_smart_entity :: proc (c: rl.Camera, e: ^Entity, f: []Entity) {
 
-    if (rl.Vector3DistanceSqrt(e.target, e.position) < 0.1 && e.is_target_valid) { 
-        found_index := find_nearest_not_picked(e.position, f)
-        f[found_index].picked = true
-        e.target = {0,0,0}
+    if ( // reached food
+        rl.Vector3DistanceSqrt(e.target, e.position) < 0.1 &&
+        e.is_target_valid &&
+        !e.is_going_home
+       ) { 
+        found_index, is_found := find_around_not_picked(f, e.position, 0.1)
+        if is_found {
+            f[found_index].picked = true
+            e.is_going_home = true
+            e.target = {0,0,0}
+        } else {
+            //reused code
+            found_index := find_nearest_not_picked(e.position, f)
+            e.target = f[found_index].position
+        }
+    } else if ( // reached home
+        rl.Vector3DistanceSqrt(e.target, e.position) < 0.1 &&
+        e.is_target_valid &&
+        e.is_going_home) {
+        e.is_target_valid = false
+        e.is_going_home = false
     }
 
-    if (rl.Vector3DistanceSqrt(e.target, e.position) < 0.1 &&
-        e.is_target_valid &&
-        e.target == {0,0,0}) {
-        e.is_target_valid = false
-    }
     
     if (!e.is_target_valid) {
         found_index := find_nearest_not_picked(e.position, f)
@@ -68,14 +97,14 @@ update_smart_entity :: proc (c: rl.Camera, e: ^Entity, f: []Entity) {
 }
 
 make_squirrels :: proc () -> (squirrels: []Entity, text: rl.Texture) {
-    max_count :: 1
+    max_count :: 10
     squirrels = make([]Entity, max_count)
     text = rl.LoadTexture("squirrel.png")
     for &s in squirrels {
         s.texture = text
         s.offset = {0,0,0}
         s.scale = 0.5
-        s.position = {0, 0, 0}
+        s.position = {rand.float32_range(-5,5)*2, 0, rand.float32_range(-5,5)*2}
     }
     
     return
@@ -105,24 +134,27 @@ update_dumb_entity :: proc (c: rl.Camera, e: ^Entity) {
 } 
 
 draw_entity :: proc (c: rl.Camera, e: Entity, debug: bool) {
-    rl.DrawBillboardPro(
-        c,
-        e.texture,
-        {0, 0, f32(e.texture.width), f32(e.texture.height)}, //source 
-        e.position + e.offset, //position
-        {0, 1, 0}, //up
-        {1, 1} * e.scale, //size
-        {0.5, 0} * e.scale, //origin
-        0,
-        rl.WHITE
-    )
 
-    if debug {
-        rl.DrawLine3D(e.position, e.position + {1,0,0},rl.RED)
-        rl.DrawLine3D(e.position, e.position + {0,1,0},rl.GREEN)
-        rl.DrawLine3D(e.position, e.position + {0,0,1},rl.BLUE)
+    if !e.picked {
+        rl.DrawBillboardPro(
+            c,
+            e.texture,
+            {0, 0, f32(e.texture.width), f32(e.texture.height)}, //source 
+            e.position + e.offset, //position
+            {0, 1, 0}, //up
+            {1, 1} * e.scale, //size
+            {0.5, 0} * e.scale, //origin
+            0,
+            rl.WHITE
+        )
 
-        rl.DrawLine3D(e.position, e.target, rl.PURPLE)
+        if debug {
+            rl.DrawLine3D(e.position, e.position + {1,0,0},rl.RED)
+            rl.DrawLine3D(e.position, e.position + {0,1,0},rl.GREEN)
+            rl.DrawLine3D(e.position, e.position + {0,0,1},rl.BLUE)
+
+            rl.DrawLine3D(e.position, e.target, rl.PURPLE)
+        }
     }
 }
 
