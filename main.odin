@@ -6,8 +6,6 @@ import "core:math"
 import "core:math/rand"
 import rl "vendor:raylib"
 
-DEBUG :: false
-
 paths: map[[6]f32]Land // [.. from, ..to]
 
 from_to :: #force_inline proc (from: [3]f32, to: [3]f32) -> (result: [6]f32) {
@@ -26,15 +24,16 @@ Entity :: struct {
     scale: f32,
     target: [3]f32,
     is_target_valid: bool,
+    picked: bool,
 }
 
-find_nearest :: proc (from: [3]f32, entities: []Entity) -> (index: int) {
+find_nearest_not_picked :: proc (from: [3]f32, entities: []Entity) -> (index: int) {
 
     nearest: f32 = max(f32)
 
     for e,i in entities {
         dist := rl.Vector3DistanceSqrt(from, e.position)
-        if dist < nearest {
+        if dist < nearest && !e.picked {
             nearest = dist
             index = i
         }
@@ -44,20 +43,23 @@ find_nearest :: proc (from: [3]f32, entities: []Entity) -> (index: int) {
 }
 
 map_size :: 10
-update_smart_entity :: proc (c: rl.Camera, e: ^Entity) {
+update_smart_entity :: proc (c: rl.Camera, e: ^Entity, f: []Entity) {
 
-    if (rl.Vector3DistanceSqrt(e.target, e.position) < 1 && e.is_target_valid) {
+    if (rl.Vector3DistanceSqrt(e.target, e.position) < 0.1 && e.is_target_valid) { 
+        found_index := find_nearest_not_picked(e.position, f)
+        f[found_index].picked = true
         e.target = {0,0,0}
     }
 
-    if (rl.Vector3DistanceSqrt(e.target, e.position) < 1 &&
+    if (rl.Vector3DistanceSqrt(e.target, e.position) < 0.1 &&
         e.is_target_valid &&
         e.target == {0,0,0}) {
         e.is_target_valid = false
     }
     
     if (!e.is_target_valid) {
-        e.target = {rand.float32_range(-map_size,map_size), 0, rand.float32_range(-map_size,map_size)}
+        found_index := find_nearest_not_picked(e.position, f)
+        e.target = f[found_index].position
         e.is_target_valid = true
     }
     
@@ -88,7 +90,7 @@ make_foods :: proc () -> (foods: []Entity, food_text: rl.Texture) {
         f.offset = {0,0.1,0}
         f.scale = 0.5
         f.delta_offset = 0.2
-        f.position = {rand.float32_range(-10,10), 0, rand.float32_range(-10,10)}
+        f.position = {rand.float32_range(-5,5)*2, 0, rand.float32_range(-5,5)*2}
     }
     return
 }
@@ -102,7 +104,7 @@ update_dumb_entity :: proc (c: rl.Camera, e: ^Entity) {
     }
 } 
 
-draw_entity :: proc (c: rl.Camera, e: Entity) {
+draw_entity :: proc (c: rl.Camera, e: Entity, debug: bool) {
     rl.DrawBillboardPro(
         c,
         e.texture,
@@ -115,10 +117,12 @@ draw_entity :: proc (c: rl.Camera, e: Entity) {
         rl.WHITE
     )
 
-    if DEBUG {
+    if debug {
         rl.DrawLine3D(e.position, e.position + {1,0,0},rl.RED)
         rl.DrawLine3D(e.position, e.position + {0,1,0},rl.GREEN)
         rl.DrawLine3D(e.position, e.position + {0,0,1},rl.BLUE)
+
+        rl.DrawLine3D(e.position, e.target, rl.PURPLE)
     }
 }
 
@@ -199,7 +203,7 @@ main :: proc () {
         handle_camera_inputs(&camera)
         
         for &s in squirrels {
-            update_smart_entity(camera, &s)
+            update_smart_entity(camera, &s, foods)
         }
         for &f in foods {
             update_dumb_entity(camera, &f)
@@ -218,17 +222,17 @@ main :: proc () {
                 rl.BeginShaderMode(alphaDiscard);
                 defer rl.EndShaderMode()
 
-                rl.DrawGrid(10,1)
+                rl.DrawGrid(map_size*2, 1)
                 rl.DrawLine3D({0,0,0},{1,0,0},rl.RED)
                 rl.DrawLine3D({0,0,0},{0,1,0},rl.GREEN)
                 rl.DrawLine3D({0,0,0},{0,0,1},rl.BLUE)
 
-                draw_entity(camera, tree)
+                draw_entity(camera, tree, false)
                 for f in foods {
-                    draw_entity(camera, f)
+                    draw_entity(camera, f, false)
                 }
                 for s in squirrels {
-                    draw_entity(camera, s)
+                    draw_entity(camera, s, true)
                 }
                 
             }
