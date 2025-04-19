@@ -10,23 +10,23 @@ paths: map[[6]f32]Land // [.. from, ..to]
 
 from_to :: #force_inline proc (from: [3]f32, to: [3]f32) -> (result: [6]f32) {
     for i in 0..<3 {
-        result[i] = from[i]
+        result[i]   = from[i]
         result[i+3] = to[i+3]
     }    
-    return 
+    return
 }
 
 Entity :: struct {
-    position: [3]f32,
-    offset: [3]f32,
-    delta_offset: f32,
-    texture: rl.Texture,
-    scale: f32,
-    target: [3]f32,
-    is_target_valid: bool,
-    is_going_home: bool,
-    picked: bool,
-    is_targeted: bool,
+    position        : [3]f32,
+    offset          : [3]f32,
+    delta_offset    : f32,
+    texture         : rl.Texture,
+    scale           : f32,
+    target          : [3]f32,
+    is_target_valid : bool,
+    is_going_home   : bool,
+    picked          : bool,
+    is_targeted     : bool,
 }
 
 find_nearest_not_targeted :: proc (from: [3]f32, entities: []Entity) -> (index: int) {
@@ -53,6 +53,7 @@ find_around_not_picked :: proc (e: []Entity, position: [3]f32, radius: f32) -> (
         if elem.picked  {
             continue
         }
+
         if rl.Vector3DistanceSqrt(elem.position, position) <= radius {
             found_index = i
             is_found = true
@@ -65,12 +66,11 @@ find_around_not_picked :: proc (e: []Entity, position: [3]f32, radius: f32) -> (
 
 map_size :: 10
 update_smart_entity :: proc (c: rl.Camera, e: ^Entity, f: []Entity) {
-
-    if ( // reached food
+    // reached food
+    if (
         rl.Vector3DistanceSqrt(e.target, e.position) < 0.1 &&
         e.is_target_valid &&
-        !e.is_going_home
-       ) { 
+        !e.is_going_home ) { 
         found_index, is_found := find_around_not_picked(f, e.position, 0.1)
         if is_found {
             f[found_index].picked = true
@@ -99,7 +99,7 @@ update_smart_entity :: proc (c: rl.Camera, e: ^Entity, f: []Entity) {
     }
     
     e.position += rl.Vector3Normalize(e.target - e.position) * rl.GetFrameTime() 
-        
+
 }
 
 make_squirrels :: proc () -> (squirrels: []Entity, text: rl.Texture) {
@@ -152,12 +152,12 @@ draw_entity :: proc (c: rl.Camera, e: Entity, debug: bool) {
             {0.5, 0} * e.scale, //origin
             0,
             rl.WHITE
-        )
+            )
 
         if debug {
-            rl.DrawLine3D(e.position, e.position + {1,0,0},rl.RED)
-            rl.DrawLine3D(e.position, e.position + {0,1,0},rl.GREEN)
-            rl.DrawLine3D(e.position, e.position + {0,0,1},rl.BLUE)
+            rl.DrawLine3D(e.position, e.position + {1,0,0}, rl.RED)
+            rl.DrawLine3D(e.position, e.position + {0,1,0}, rl.GREEN)
+            rl.DrawLine3D(e.position, e.position + {0,0,1}, rl.BLUE)
 
             rl.DrawLine3D(e.position, e.target, rl.PURPLE)
         }
@@ -199,12 +199,12 @@ main :: proc () {
     
     camera := rl.Camera{}
     camera.position = {5,4,5}
-    camera.target = {0,2,0}
+    camera.target = {0,0,0}
     camera.up = {0,1,0}
     camera.fovy = 45
     camera.projection = .PERSPECTIVE
 
-    tree : Entity
+    tree: Entity
     tree.texture = rl.LoadTexture("tree.png")
     tree.scale = 3
     tree.offset = {0,0,0}
@@ -225,7 +225,7 @@ main :: proc () {
     rl.SetTargetFPS(60)
     
     for !rl.WindowShouldClose() {
-        
+
         if rl.IsCursorHidden() {
             rl.UpdateCamera(&camera, .FIRST_PERSON)
         }
