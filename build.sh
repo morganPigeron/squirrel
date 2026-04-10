@@ -2,4 +2,9 @@
 
 set -e
 
-odin run .
+odin build . -debug
+
+gf2 -ex=r squirrel
+
+
+

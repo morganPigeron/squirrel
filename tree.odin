@@ -3,6 +3,8 @@ package main
 import rl "vendor:raylib"
 import "core:math"
 
+import "rdm"
+
 draw_tree :: proc (position: rl.Vector3, height, start_radius, end_radius: f32) {
 
 	RESOLUTION :: 20
@@ -35,11 +37,41 @@ draw_tree :: proc (position: rl.Vector3, height, start_radius, end_radius: f32) 
 
 
 	// tronc
-	rl.DrawCylinderWiresEx(position, {position.x, height, position.y}, start_radius, end_radius, RESOLUTION, rl.BROWN)
+	rl.DrawCylinderEx(position, {position.x, height, position.y}, start_radius, end_radius, RESOLUTION, rl.BROWN)
 	// branch
 	rl.DrawCylinderWiresEx(branch_start_point, branch_vector, branch_start_radius, branch_end_radius, RESOLUTION, rl.GREEN)
 	{
 		rl.DrawLine3D(branch_origin, branch_start_point, rl.RED)
 		rl.DrawLine3D(branch_start_point, branch_vector, rl.BLUE)
 	}
+}
+
+draw_physic_branch :: proc (beam: rdm.Beam, base: rl.Vector3, dir: rl.Vector3) {
+
+	angle := rl.Vector3Angle(dir, {1,0,0})
+
+    for i in 1..<(len(beam.points)) {
+        start_point := beam.points[i-1]
+        end_point   := beam.points[i]
+
+        start := rl.Vector3 {
+            start_point.x,
+            start_point.y,
+            0,
+        }
+
+        end := rl.Vector3 {
+            end_point.x,
+            end_point.y,
+            0,
+        }
+
+        start_rotated := rl.Vector3RotateByAxisAngle(start, {0,1,0}, angle) + base
+		end_rotated   := rl.Vector3RotateByAxisAngle(end  , {0,1,0}, angle) + base
+		
+		section_start := 0.1 - (f32(i-1) * 0.05 / f32(len(beam.points)))
+		section_end   := 0.1 - (f32(i  ) * 0.05 / f32(len(beam.points)))
+
+        rl.DrawCylinderEx(start_rotated, end_rotated, section_start , section_end, 10, rl.BROWN)
+    }
 }
