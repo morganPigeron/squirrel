@@ -114,8 +114,11 @@ main :: proc () {
 
                 ref := rl.Vector3{0, 5, 0}
 
-                draw_tree({}, 10, 0.3, 0.1)
-                draw_physic_branch(beam, ref, {1,0,0})
+                //draw_tree({}, 10, 0.3, 0.1)
+                //draw_physic_branch(beam, ref, {1,0,0})
+
+                tree := Tree {{}, 10, 0.3, 0.1}
+                draw_branch_on_tree(tree, beam, 3.14*s)
                 //////////////////////////////////////////////
 
                 //draw_entity(camera, tree, false)
