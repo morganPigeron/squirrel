@@ -7,6 +7,7 @@ import "core:math/rand"
 import rl "vendor:raylib"
 
 import "imui"
+import "rdm"
 
 main :: proc () {
 
@@ -85,7 +86,42 @@ main :: proc () {
 
                 draw_debug()
 
-                draw_tree({}, 10, 0.3, 0.1)
+                //draw_tree({}, 10, 0.3, 0.1)
+                //////////////////////////////////////////////
+
+                s := math.sin(f32(rl.GetTime()))
+
+                beam := rdm.new_beam(500, 200, 4)
+                defer rdm.delete_beam(beam)
+
+                force := rdm.Force{
+                    {0,- rdm.to_newton(5)},
+                    {2.5*s+1,        0},
+                }
+
+                rdm.solve(&beam, force)
+                rdm.apply_length_correction(&beam)
+
+                ref := rl.Vector3{0, 5, 0}
+                for i in 1..<(len(beam.points)) {
+                    start_point := beam.points[i-1]
+                    end_point   := beam.points[i]
+
+                    rl.DrawCylinderWiresEx(
+                        {
+                            start_point.x + ref.x,
+                            start_point.y + ref.y,
+                            ref.z
+                        }, 
+                        {
+                            end_point.x + ref.x,
+                            end_point.y + ref.y,
+                            ref.z
+                        },
+                        0.1, 0.1, 5, rl.BROWN)
+                }
+                
+                //////////////////////////////////////////////
 
                 //draw_entity(camera, tree, false)
                 for f in foods {

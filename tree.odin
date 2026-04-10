@@ -12,8 +12,6 @@ draw_tree :: proc (position: rl.Vector3, height, start_radius, end_radius: f32) 
 	// calcul de la déformé de la branche en prenant en compte le tronc déformé 
 	// boucle jusqua deformé seuil 
 
-
-
 	// branch
 	branch_angle        := f32(30 * rl.DEG2RAD)
 	branch_start_radius := start_radius/2

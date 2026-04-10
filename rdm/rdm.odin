@@ -6,6 +6,16 @@ import "core:strings"
 import "core:unicode/utf8"
 import "core:math"
 
+GRAVITY :: 9.81
+
+to_newton :: proc (kg: f32) -> f32 {
+	return kg * GRAVITY
+}
+
+to_mass :: proc (N: f32) -> f32 {
+	return N / GRAVITY
+}
+
 Beam :: struct {
 	EI: f32,
 	points: []rl.Vector2,
