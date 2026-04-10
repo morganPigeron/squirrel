@@ -6,6 +6,7 @@ import "core:math"
 import "core:math/rand"
 import rl "vendor:raylib"
 import "core:os"
+import "core:mem"
 
 import "imui"
 import "rdm"
@@ -57,7 +58,22 @@ main :: proc () {
     }
     
     rl.SetTargetFPS(240)
-    
+
+    SAMPLES :: 100
+    branches_angle  :[SAMPLES]f32
+    branches_height :[SAMPLES]f32
+    beams           :[SAMPLES]rdm.Beam
+    forces          :[SAMPLES]rdm.Force
+    for i:=0; i<SAMPLES; i+=1 {
+        branches_angle[i]  = f32(rand.uint32())
+        branches_height[i] = f32(rand.uint32() % 10) 
+        beams[i] = rdm.new_beam(500, 10, f32(rand.uint32() % 200)/100)
+        forces[i] = rdm.Force{
+            {0,- rdm.to_newton(f32(rand.uint32() % 400)/100)},
+            {2,                     0},
+        }
+    }
+
     for !rl.WindowShouldClose() {
 
         free_all(context.temp_allocator)
@@ -101,24 +117,17 @@ main :: proc () {
 
                 s := math.sin(f32(rl.GetTime()))
 
-                beam := rdm.new_beam(500, 200, 2)
-                defer rdm.delete_beam(beam)
-
-                force := rdm.Force{
-                    {0,- rdm.to_newton(2 + s)},
-                    {1.5,                     0},
-                }
-
-                rdm.solve(&beam, force)
-                rdm.apply_length_correction(&beam)
-
-                ref := rl.Vector3{0, 5, 0}
-
-                //draw_tree({}, 10, 0.3, 0.1)
-                //draw_physic_branch(beam, ref, {1,0,0})
-
                 tree := Tree {{}, 10, 0.3, 0.1}
-                draw_branch_on_tree(tree, beam, 3.14*s)
+                draw_tree(tree)
+
+                for i:=0; i<SAMPLES; i+=1 {
+                    mem.zero_slice(beams[i].points[:]);
+                    f := forces[i]
+                    f.load.y *= s
+                    rdm.solve(&beams[i], f)
+                    rdm.apply_length_correction(&beams[i])
+                    draw_branch_on_tree(tree, beams[i], branches_angle[i], branches_height[i])
+                }
                 //////////////////////////////////////////////
 
                 //draw_entity(camera, tree, false)

@@ -6,6 +6,11 @@ import "core:log"
 
 import "rdm"
 
+RESOLUTION :: 20
+
+BRANCH_SECTION_START :: 0.03
+BRANCH_SECTION_END   :: 0.02
+
 Tree :: struct {
 	position: rl.Vector3, 
 	height: f32, 
@@ -13,51 +18,18 @@ Tree :: struct {
 	end_radius: f32,
 }
 
-draw_tree :: proc (position: rl.Vector3, height, start_radius, end_radius: f32) {
-
-	RESOLUTION :: 20
-
-	// calcul de la déformé de la branche
-	// calcul de la déformé du tronc en prenant en compte la branche
-	// calcul de la déformé de la branche en prenant en compte le tronc déformé 
-	// boucle jusqua deformé seuil 
-
-	// branch
-	branch_angle        := f32(30 * rl.DEG2RAD)
-	branch_start_radius := start_radius/2
-	branch_end_radius   := branch_start_radius/2
-	branch_length       :f32 = height/3
-	branch_height       :f32 = height/2
-
-	// thales: BC (AC' / AC)
-	branch_slope_delta  := (start_radius - end_radius) * (branch_height/height) 
-	branch_tronc_radius := start_radius - branch_slope_delta
-
-	// R^2 = (br/2)^2 + x^2
-	branch_center_offset:= math.sqrt( math.pow(branch_tronc_radius, 2) - math.pow(branch_start_radius, 2) )
-
-	branch_start_x      := branch_center_offset * math.cos(branch_angle)
-	branch_start_y      := branch_center_offset * math.sin(branch_angle)
-	branch_start_point  := position + {branch_start_x, branch_height, branch_start_y} 
-	branch_origin       := position + {             0, branch_height,              0}
-	branch_unit_dir     := rl.Vector3Normalize(branch_start_point - branch_origin) 
-	branch_vector       := branch_unit_dir * branch_length + branch_start_point
-
-
-	// tronc
-	rl.DrawCylinderEx(position, {position.x, height, position.y}, start_radius, end_radius, RESOLUTION, rl.BROWN)
-	// branch
-	rl.DrawCylinderWiresEx(branch_start_point, branch_vector, branch_start_radius, branch_end_radius, RESOLUTION, rl.GREEN)
+draw_tree :: proc (tree: Tree) {
+	rl.DrawCylinderWiresEx(
+	tree.position, 
 	{
-		rl.DrawLine3D(branch_origin, branch_start_point, rl.RED)
-		rl.DrawLine3D(branch_start_point, branch_vector, rl.BLUE)
-	}
+		tree.position.x, 
+		tree.height, 
+		tree.position.y
+	}, 
+	tree.start_radius, tree.end_radius, RESOLUTION, rl.GREEN)
 }
 
-draw_branch_on_tree :: proc (tree: Tree, branch: rdm.Beam, angle_rad: f32) {
-
-	RESOLUTION :: 20
-
+draw_branch_on_tree :: proc (tree: Tree, branch: rdm.Beam, angle_rad, height: f32) {
 	// calcul de la déformé de la branche
 	// calcul de la déformé du tronc en prenant en compte la branche
 	// calcul de la déformé de la branche en prenant en compte le tronc déformé 
@@ -65,10 +37,10 @@ draw_branch_on_tree :: proc (tree: Tree, branch: rdm.Beam, angle_rad: f32) {
 
 	// branch
 	branch_angle        := angle_rad
-	branch_start_radius :f32= 0.1
-	branch_end_radius   := 0.05
+	branch_start_radius :f32= BRANCH_SECTION_START
+	branch_end_radius   := BRANCH_SECTION_END
 	branch_length       := branch.length
-	branch_height       :f32 = tree.height/2
+	branch_height       := height
 
 	// thales: BC (AC' / AC)
 	branch_slope_delta  := (tree.start_radius - tree.end_radius) * (branch_height/tree.height) 
@@ -84,26 +56,8 @@ draw_branch_on_tree :: proc (tree: Tree, branch: rdm.Beam, angle_rad: f32) {
 	branch_unit_dir     := rl.Vector3Normalize(branch_start_point - branch_origin) 
 	branch_vector       := branch_unit_dir * branch_length + branch_start_point
 
-	rl.DrawLine3D(branch_origin, branch_vector, rl.PURPLE)
-
-	// tronc
-	rl.DrawCylinderWiresEx(
-		tree.position, 
-		{
-			tree.position.x, 
-			tree.height, 
-			tree.position.y
-		}, 
-		tree.start_radius, tree.end_radius, RESOLUTION, rl.GREEN)
 	// branch
 	draw_physic_branch(branch, branch_start_point, branch_unit_dir)
-	/*
-	rl.DrawCylinderWiresEx(branch_start_point, branch_vector, branch_start_radius, branch_end_radius, RESOLUTION, rl.GREEN)
-	{
-		rl.DrawLine3D(branch_origin, branch_start_point, rl.RED)
-		rl.DrawLine3D(branch_start_point, branch_vector, rl.BLUE)
-	}
-	*/
 }
 
 draw_physic_branch :: proc (beam: rdm.Beam, base: rl.Vector3, dir: rl.Vector3) {
@@ -124,9 +78,12 @@ draw_physic_branch :: proc (beam: rdm.Beam, base: rl.Vector3, dir: rl.Vector3) {
 		start_rotated := rl.Vector3Transform(start, rot) + base
 		end_rotated   := rl.Vector3Transform(end,   rot) + base
 
-		section_start := 0.1 - (f32(i-1) * 0.05 / f32(len(beam.points)))
-		section_end   := 0.1 - (f32(i  ) * 0.05 / f32(len(beam.points)))
+		t0 := f32(i-1) / f32(len(beam.points)-1)
+		t1 := f32(i  ) / f32(len(beam.points)-1)
 
-		rl.DrawCylinderEx(start_rotated, end_rotated, section_start , section_end, 10, rl.BROWN)
+		section_start := BRANCH_SECTION_START + t0 * (BRANCH_SECTION_END - BRANCH_SECTION_START)
+		section_end   := BRANCH_SECTION_START + t1 * (BRANCH_SECTION_END - BRANCH_SECTION_START)
+
+		rl.DrawCylinderEx(start_rotated, end_rotated, section_start , section_end, 5, rl.BROWN)
 	}
 }
